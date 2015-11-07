@@ -8,6 +8,7 @@ public class DPLLSat {
 	
 	static HashMap<String, Boolean>   model        = new HashMap<String, Boolean>();
 	int iter = 0;
+	
 	public static void main(String args[]){
 
 		/*check inputs*/
@@ -33,6 +34,10 @@ public class DPLLSat {
 			return;
 		}
 	}
+	/*
+	 * print solution
+	 * 
+	 * */
 	private void printsolution(){
 		System.out.println("----------------------------");
 		System.out.format("node searched=%d\n", iter);
@@ -42,6 +47,11 @@ public class DPLLSat {
 		}
 		printtrue();
 	}
+	
+	/*
+	 * print literals with true value
+	 * 
+	 * */
 	private void printtrue(){
 		System.out.println("true props:");
 		for(String key:model.keySet()){
@@ -49,6 +59,11 @@ public class DPLLSat {
 				System.out.println(key);
 		}
 	}
+	
+	/*
+	 * run DPLL - recursive backtracking search algorithm
+	 * 
+	 * */
 	private boolean dpll(HashMap<String, Boolean> symbols){
 //		if(iter>30)
 //			System.exit(42);
@@ -102,6 +117,10 @@ public class DPLLSat {
 		return true;
 		
 	}
+	/*
+	 * find an unit clause (heuristic)
+	 * 
+	 * */
 	private String findUnitclause(HashMap<String, Boolean> symbols){
 		for(Clause c: clauses){
 			if(c.isUnitclause && !symbols.get(c.unitclause)){
@@ -110,6 +129,10 @@ public class DPLLSat {
 		}
 		return null;
 	}
+	/*
+	 * propagate unit clauses when a literal has been added to a model
+	 * 
+	 * */
 	private void propagateUnitclause(){
 		int unit;
 		String unitclause=null;
@@ -129,12 +152,17 @@ public class DPLLSat {
 				if(unit==1){
 					c.isUnitclause = true;
 					c.unitclause   = unitclause;
-					System.out.format("unit_clause on (%s) implies\n",c.clause);
+					System.out.format("unit_clause on (%s)\n",c.clause);
 				}
 			}
 		}
 		
 	}
+	
+	/*
+	 * revoke propagation for unit clauses when a literal has been removed from model
+	 *  
+	 * */
 	private void propagateUnitclause(String symbol){
 		for(Clause c : clauses){	
 			if(c.elements.size()>1 && c.isUnitclause){
@@ -148,6 +176,14 @@ public class DPLLSat {
 			}
 		}		
 	}
+	
+	/*
+	 * check if there is a not-satisfying clause with a model
+	 * 
+	 * true : some clauses are false
+	 * false: when model hasn't been set, all clauses are satisfying
+	 * 
+	 * */
 	private boolean isSomeclausefalse(){
 		
 		if(model.size()<1)
@@ -164,6 +200,11 @@ public class DPLLSat {
 		/*if all clauses are true*/
 		return false;		
 	}
+	
+	/*
+	 * find unassigned symbol
+	 * 
+	 * */
 	private String findUnassignedsymbol(HashMap<String, Boolean> symbols){
 		for(String key:symbols.keySet()){
 			if(!symbols.get(key)){
@@ -172,6 +213,13 @@ public class DPLLSat {
 		}
 		return "";
 	}
+	/*
+	 * check all clauses satisfy a model when a model is fully set
+	 * 
+	 * true : success
+	 * false: the model hasn't been fully set, there are unsatisfying clauses for the model
+	 * 
+	 * */
 	private boolean isAllclausestrue(HashMap<String, Boolean> symbols){
 		if(model.size()<1)
 			return false;
@@ -192,6 +240,7 @@ public class DPLLSat {
 	}
 	/*
 	 * print initial clauses
+	 * 
 	 * */
 	private void printInitialclauses(){
 		System.out.println("Initial clauses:");
@@ -204,6 +253,7 @@ public class DPLLSat {
 	
 	/*
 	 * print symbols
+	 * 
 	 * */
 	private void printSymbols(HashMap<String,Boolean> symbols){
 		System.out.println("Props:");
@@ -214,6 +264,7 @@ public class DPLLSat {
 	
 	/*
 	 * extract Symbols from clauses
+	 * 
 	 * */
 	private HashMap<String, Boolean> extractSymbols(){
 		HashMap<String, Boolean> symbols = new HashMap<String, Boolean> ();
@@ -231,6 +282,10 @@ public class DPLLSat {
 		printSymbols(symbols);
 		return symbols;
 	}
+	/*
+	 * print model
+	 * 
+	 * */
 	private void printModel(){
 		System.out.print("model={");
 		for(String key:model.keySet()){

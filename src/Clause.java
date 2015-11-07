@@ -54,6 +54,7 @@ public class Clause {
 	}
 	/*
 	 * print elements
+	 * 
 	 * */
 	public void printElements(){
 		for(Element e:elements){
@@ -64,6 +65,7 @@ public class Clause {
 	
 	/*
 	 * build elements from a string type clause; 
+	 * 
 	 */
 	 
 	private void buildElements(){
@@ -92,6 +94,7 @@ public class Clause {
 	
 	/*
 	 * override basic function for compare/hashing 
+	 * 
 	 * */
 	public boolean equals(Object o){
 		if(o instanceof Clause){
@@ -109,6 +112,10 @@ public class Clause {
 		return clause;
 	}
 }
+/*
+ * inner class for elements
+ * 
+ * */
 class Element{
 	String symbol;
 	boolean value;

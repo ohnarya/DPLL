@@ -8,6 +8,11 @@ import java.util.regex.Pattern;
 
 
 public class common {
+	
+	/*
+	 * initialize capabilities
+	 * 
+	 * */
 	public static HashSet<String> InitializeCapability(){
 		HashSet<String> capabilities = new HashSet<String>();
 		
@@ -22,6 +27,10 @@ public class common {
 		return capabilities;
 	}	
 	
+	/*
+	 * check inputs
+	 * 
+	 * */
 	public static boolean checkInput(String args[]){
 		int i=1;
 		if(args.length ==1){
@@ -67,6 +76,11 @@ public class common {
 			return false;
 		}
 	}
+	
+	/*
+	 * read an input file
+	 * 
+	 * */
 	public static ArrayList<Clause> readFile(String filename){
 		ArrayList<Clause> clauses = new ArrayList<Clause>();
 		
