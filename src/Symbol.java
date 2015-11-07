@@ -1,6 +1,6 @@
 public class Symbol implements Comparable<Symbol>{
 	String  symbol;
-	Boolean value;
+	boolean isUsed;
 	Symbol(String s){
 		symbol = s;
 	}
@@ -21,7 +21,7 @@ public class Symbol implements Comparable<Symbol>{
 	public int hashCode(){
 		return this.symbol.hashCode();
 	}
-	public String toSting(){
-		return this.symbol+":"+value;
+	public String toString(){
+		return this.symbol;
 	}
 }

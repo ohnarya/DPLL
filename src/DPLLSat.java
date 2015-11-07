@@ -1,41 +1,174 @@
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 
 public class DPLLSat {
 	static HashSet<String>    capabilities = new HashSet<String>();
 	static ArrayList<Clause>  clauses      = new ArrayList<Clause>();
-	static ArrayList<Symbol>  symbols      = new ArrayList<Symbol>();
 	
+	static HashMap<String, Boolean>   model        = new HashMap<String, Boolean>();
+	int iter = 0;
 	public static void main(String args[]){
-		
-		InitializeCapability();
-		if(!checkInput(args))
+
+		/*check inputs*/
+		if(!common.checkInput(args))
 			return;
-		if(!readFile(args[0]))
+		/*dpll satisfiability*/
+		if(args.length==1){
+			DPLLSat dpllsat = new DPLLSat();
+			/*readfile*/
+			clauses = common.readFile(args[0]);
+			if(clauses!=null && clauses.isEmpty() )
+				return;
+				
+			ArrayList<Symbol> symbols = dpllsat.extractSymbols();
+			dpllsat.printInitialclauses();
+			dpllsat.dpll(symbols);
+			dpllsat.printsolution();
+			
+		/*dpll job_agent satisfiability*/	
+		}else if(args.length==2){
+//			DPLLjob dplljob = new DPLLjob();
+		}else{
 			return;
-		
-		if(clauses.isEmpty())
-			return;
-		
-		DPLLSat dpllsat = new DPLLSat();
-		dpllsat.extractSymbols();
-		dpllsat.printInitialclauses();
-		dpllsat.dpll();
+		}
 	}
-	private boolean dpll(){
-		for(Clause c : clauses)
-			c.printElements();
-		return false;
+	private void printsolution(){
+		System.out.println("----------------------------");
+		System.out.format("node searched=%d\n", iter);
+		System.out.println("solution:");
+		for(String key:model.keySet()){
+			System.out.format("%s=%b\n",key,model.get(key));
+		}
+		printtrue();
 	}
+	private void printtrue(){
+		System.out.println("true props:");
+		for(String key:model.keySet()){
+			if(model.get(key))
+				System.out.println(key);
+		}
+	}
+	private boolean dpll(ArrayList<Symbol> symbols){
+		/*check all clauses are true*/
+		if(isAllclausestrue(symbols))
+			return true;
+		
+		if(isSomeclausefalse())
+			return false;
+		
+		Symbol s;
+		
+		//s = findUnitclause(symbols);
+		
+		s = findUnassignedsymbol(symbols);
+		s.isUsed = true;
+		printModel();
+		System.out.format("[%d]trying on %s=%b\n",++iter,s.symbol,true);
+		model.put(s.symbol,true);
+		propagateUnitclause();
+		//check true first
+		if(!dpll(symbols)){
+			
+			System.out.println("backtracking");
+			printModel();
+			System.out.format("[%d]trying on %s=%b\n",++iter,s.symbol,false);
+			model.put(s.symbol,false);
+			
+			// check false later
+			if(!dpll(symbols)){
+				
+				s.isUsed = false;
+				model.remove(s.symbol);
+				propagateUnitclause(s.symbol);
+				System.out.println("backtracking");
+				return false;
+				
+			}
+				
+		}
+		/*do code*/
+		return true;
+		
+	}
+//	private Symbol findUnitclause(ArrayList<Symbol> symbols){
+//		for(Clause c: clauses){
+//			if(c.isUnitclause && )
+//		}
+//	}
+	private void propagateUnitclause(){
+		int unit;
+		
+		for(Clause c : clauses){	
+			if(!c.isUnitclause){
+				unit = c.elements.size();
+				for(Element e : c.elements){
+					if(model.containsKey(e.symbol)){
+						unit--;
+						if(unit==1)
+							c.isUnitclause = true;
+					}
+				}
+			}
+		}
+	}
+	private void propagateUnitclause(String symbol){
+		for(Clause c : clauses){	
+			if(c.isUnitclause){
+				for(Element e : c.elements){
+					if(e.symbol.equals(symbol) && c.isUnitclause){
+						c.isUnitclause = false;
+					}
+				}
+			}
+		}		
+	}
+	private boolean isSomeclausefalse(){
+		
+		if(model.size()<1)
+			return false;
+		
+		/*if model is complete*/
+		for(Clause c : clauses){
+			//System.out.println(c);
+			if(c.isTrue(model)== -1){
+				System.out.format("not satisfying on (%s)\n", c.clause);
+				return true;
+			}
+		}
+		/*if all clauses are true*/
+		return false;		
+	}
+	private Symbol findUnassignedsymbol(ArrayList<Symbol> symbols){
+		for(Symbol s : symbols){
+			if(!s.isUsed){
+				return s;
+			}
+		}
+		return null;
+	}
+	private boolean isAllclausestrue(ArrayList<Symbol> symbols){
+		if(model.size()<1)
+			return false;
+
+		if(model.size()!=symbols.size()){
+			//System.out.println("Not fully go");
+			return false;
+		}
+		/*if model is complete*/
+		for(Clause c : clauses){
+			if(c.isTrue(model)!=1){
+				//System.out.format("%s is not true\n",c.clause);
+				return false;
+			}
+		}
+		/*if all clauses are true*/
+		return true;
+	}
+	/*
+	 * print initial clauses
+	 * */
 	private void printInitialclauses(){
 		System.out.println("Initial clauses:");
 		int i=0;
@@ -44,13 +177,22 @@ public class DPLLSat {
 		
 		System.out.println("-------------------");
 	}
-	private void printSymbols(){
+	
+	/*
+	 * print symbols
+	 * */
+	private void printSymbols(ArrayList<Symbol> symbols){
 		System.out.println("Props:");
 		for(Symbol s:symbols)
 			System.out.format("%s " , s.symbol );
 		System.out.println("");
 	}
-	private void extractSymbols(){
+	
+	/*
+	 * extract Symbols from clauses
+	 * */
+	private ArrayList<Symbol> extractSymbols(){
+		ArrayList<Symbol> symbols = new ArrayList<Symbol>();
 		String tmp = null;
 		for(int i=0;i<clauses.size();i++){
 			tmp = clauses.get(i).clause;
@@ -65,85 +207,17 @@ public class DPLLSat {
 		}
 		/*sort symbols*/
 		Collections.sort(symbols);
-		printSymbols();
+		printSymbols(symbols);
+		return symbols;
+	}
+	private void printModel(){
+		System.out.print("model={");
+		for(String key:model.keySet()){
+			System.out.format("(%s:%b)",key,model.get(key));
+		}
+		System.out.println("}");
 	}
 
-	private static boolean readFile(String filename){
-		try(BufferedReader br = new BufferedReader(new FileReader(filename))){
-			String curline;
-			while((curline = br.readLine()) !=null ){
-				/*ignore empty lines*/
-				if(curline.trim().length()<1)
-					continue;
-				/*ignore comments*/
-				Pattern p = Pattern.compile("[#]");
-				Matcher m = p.matcher(curline);
-				
-				if(!m.find()){
-					if(!clauses.contains(curline))
-						clauses.add(new Clause(curline));
-				}
-			}
-		}catch(IOException e){
-			System.out.format("%s does not exist.\n",filename);
-			return false;
-		}
-		return true;
-	}
-	private static void InitializeCapability(){
-		capabilities.add("painter");
-		capabilities.add("stapler");
-		capabilities.add("recharger");
-		capabilities.add("welder");
-		capabilities.add("cutter");
-		capabilities.add("sander");
-		capabilities.add("joiner");
-		capabilities.add("gluer");
-	}
-	private static boolean checkInput(String args[]){
-		int i=1;
-		if(args.length != 2){
-			System.out.format("[%d] Input : xxxx.kb \"lists of capability\"",i);  //1
-			return false;
-		}
-		i++;
-		String filename = args[0];
-		if(filename.isEmpty()){
-			System.out.format("[%d] Input : xxxx.kb \"lists of capability\"",i);  //2
-			return false;
-		}
-		Pattern p = Pattern.compile("\\w+.kb");
-		Matcher m = p.matcher(filename.toLowerCase());
-		
-		if(!m.find()){
-			System.out.format("[%d] Input : xxxx.kb \"lists of capability\"",i); //3
-			return false;
-		}
-		
-		i++;
-		String capability = args[1];
-		if(capability.isEmpty()){
-			System.out.format("[%d] Input : xxxx.kb \"lists of capability\"",i); //4
-			return false;
-		}
-		
-		i++;
-		String[] capa = capability.split(" ");
-		if(capa.length<1){
-			System.out.format("[%d] the lists of capabilities are empty\nInput : xxxx.kb \"lists of capability\"",i); //5
-			return false;
-		}
-		i++;
-		for(int k=0;k<capa.length;k++){
-			if(!capabilities.contains(capa[k])){
-				System.out.format("[%d] \"%s\" is not in the list of capabilities\nInput : xxxx.kb \"lists of capability\"",i,capa[k]);
-				return false;
-			}
-		}
-		
-		return true;
-		
-	}
 }
 
 
