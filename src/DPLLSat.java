@@ -1,5 +1,4 @@
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -22,7 +21,7 @@ public class DPLLSat {
 			if(clauses!=null && clauses.isEmpty() )
 				return;
 				
-			ArrayList<Symbol> symbols = dpllsat.extractSymbols();
+			HashMap<String, Boolean> symbols = dpllsat.extractSymbols();
 			dpllsat.printInitialclauses();
 			dpllsat.dpll(symbols);
 			dpllsat.printsolution();
@@ -50,7 +49,9 @@ public class DPLLSat {
 				System.out.println(key);
 		}
 	}
-	private boolean dpll(ArrayList<Symbol> symbols){
+	private boolean dpll(HashMap<String, Boolean> symbols){
+//		if(iter>30)
+//			System.exit(42);
 		/*check all clauses are true*/
 		if(isAllclausestrue(symbols))
 			return true;
@@ -58,67 +59,90 @@ public class DPLLSat {
 		if(isSomeclausefalse())
 			return false;
 		
-		Symbol s;
+		String s;
+		boolean isunit = false;
+		s = findUnitclause(symbols);
 		
-		//s = findUnitclause(symbols);
+		/*no unit clauses*/
+		if(s==null){
+			s = findUnassignedsymbol(symbols);
+		}else{
+			isunit = true;
+		}
 		
-		s = findUnassignedsymbol(symbols);
-		s.isUsed = true;
+		/*s is in use*/
+		symbols.put(s,true);
 		printModel();
-		System.out.format("[%d]trying on %s=%b\n",++iter,s.symbol,true);
-		model.put(s.symbol,true);
+		System.out.format("[%d]trying on %s=%b\n",++iter,s,true);
+		model.put(s,true);
+		
+		/*set a unit clause based on a selected model*/
 		propagateUnitclause();
 		//check true first
-		if(!dpll(symbols)){
-			
+		if(!dpll(symbols)){	
 			System.out.println("backtracking");
 			printModel();
-			System.out.format("[%d]trying on %s=%b\n",++iter,s.symbol,false);
-			model.put(s.symbol,false);
+			System.out.format("[%d]trying on %s=%b\n",++iter,s,false);
+			model.put(s,false);
 			
 			// check false later
 			if(!dpll(symbols)){
+				/*s is not use any more*/
+				symbols.put(s,false);
+				/*remove symbol from model*/
+				model.remove(s);
 				
-				s.isUsed = false;
-				model.remove(s.symbol);
-				propagateUnitclause(s.symbol);
+				/*revoke an unit clause to not an unit clause */
+				propagateUnitclause(s);
 				System.out.println("backtracking");
 				return false;
-				
 			}
-				
 		}
 		/*do code*/
 		return true;
 		
 	}
-//	private Symbol findUnitclause(ArrayList<Symbol> symbols){
-//		for(Clause c: clauses){
-//			if(c.isUnitclause && )
-//		}
-//	}
+	private String findUnitclause(HashMap<String, Boolean> symbols){
+		for(Clause c: clauses){
+			if(c.isUnitclause && !symbols.get(c.unitclause)){
+				return c.unitclause;
+			}
+		}
+		return null;
+	}
 	private void propagateUnitclause(){
 		int unit;
-		
+		String unitclause=null;
 		for(Clause c : clauses){	
 			if(!c.isUnitclause){
 				unit = c.elements.size();
 				for(Element e : c.elements){
+					
 					if(model.containsKey(e.symbol)){
-						unit--;
 						if(unit==1)
-							c.isUnitclause = true;
+							break;
+						unit--;						
+					}else{
+						unitclause = e.symbol;
 					}
+				}
+				if(unit==1){
+					c.isUnitclause = true;
+					c.unitclause   = unitclause;
+					System.out.format("unit_clause on (%s) implies\n",c.clause);
 				}
 			}
 		}
+		
 	}
 	private void propagateUnitclause(String symbol){
 		for(Clause c : clauses){	
-			if(c.isUnitclause){
+			if(c.elements.size()>1 && c.isUnitclause){
 				for(Element e : c.elements){
+					
 					if(e.symbol.equals(symbol) && c.isUnitclause){
 						c.isUnitclause = false;
+						c.unitclause   = null;
 					}
 				}
 			}
@@ -140,15 +164,15 @@ public class DPLLSat {
 		/*if all clauses are true*/
 		return false;		
 	}
-	private Symbol findUnassignedsymbol(ArrayList<Symbol> symbols){
-		for(Symbol s : symbols){
-			if(!s.isUsed){
-				return s;
+	private String findUnassignedsymbol(HashMap<String, Boolean> symbols){
+		for(String key:symbols.keySet()){
+			if(!symbols.get(key)){
+				return key;
 			}
 		}
-		return null;
+		return "";
 	}
-	private boolean isAllclausestrue(ArrayList<Symbol> symbols){
+	private boolean isAllclausestrue(HashMap<String, Boolean> symbols){
 		if(model.size()<1)
 			return false;
 
@@ -181,32 +205,29 @@ public class DPLLSat {
 	/*
 	 * print symbols
 	 * */
-	private void printSymbols(ArrayList<Symbol> symbols){
+	private void printSymbols(HashMap<String,Boolean> symbols){
 		System.out.println("Props:");
-		for(Symbol s:symbols)
-			System.out.format("%s " , s.symbol );
+		for(String key:symbols.keySet())
+			System.out.format("%s " , key );
 		System.out.println("");
 	}
 	
 	/*
 	 * extract Symbols from clauses
 	 * */
-	private ArrayList<Symbol> extractSymbols(){
-		ArrayList<Symbol> symbols = new ArrayList<Symbol>();
+	private HashMap<String, Boolean> extractSymbols(){
+		HashMap<String, Boolean> symbols = new HashMap<String, Boolean> ();
 		String tmp = null;
 		for(int i=0;i<clauses.size();i++){
 			tmp = clauses.get(i).clause;
 			tmp = tmp.replace("-", "");
 			
-			for(String s : tmp.split(" ")){
-				Symbol S = new Symbol(s);
-				if(!symbols.contains(S)){
-					symbols.add(S);
+			for(String s : tmp.split(" ")){				
+				if(!symbols.containsKey(s)){
+					symbols.put(s,false);
 				}
 			}
 		}
-		/*sort symbols*/
-		Collections.sort(symbols);
 		printSymbols(symbols);
 		return symbols;
 	}

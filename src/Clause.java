@@ -6,12 +6,14 @@ public class Clause {
 	String             clause;
 	int                satisfied;
 	boolean            isUnitclause;
+	String             unitclause;
 	boolean            isPureclause;
 	ArrayList<Element> elements      = new ArrayList<Element>();
 	
 	Clause(String c){
 		this.clause       = c;
 		this.isUnitclause = false;
+		this.unitclause   = null;
 		this.isPureclause = false;
 		buildElements();
 	}
@@ -79,6 +81,12 @@ public class Clause {
 				e.value = true;
 				elements.add(e);
 			}
+		}
+		
+		/*set unit clause when it is an unit clause*/
+		if(elements.size() == 1){
+			this.isUnitclause = true;
+			this.unitclause   = elements.get(0).symbol;
 		}
 	}
 	
