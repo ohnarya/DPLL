@@ -1,3 +1,10 @@
+/*
+ * Author : Jiyoung Hwang
+ * Date   : 11/07/2015
+ * Desc   : deals with clauses including figuring out elements, if the clause is true, unknown, or false
+ * 
+ * */
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -6,7 +13,8 @@ public class Clause {
 	String             clause;
 	int                satisfied;
 	boolean            isUnitclause;
-	String             unitclause;
+	Element            unitclause;
+	
 	boolean            isPureclause;
 	ArrayList<Element> elements      = new ArrayList<Element>();
 	
@@ -21,22 +29,21 @@ public class Clause {
 	 * check a clause satisfies model
 	 * return 
 	 * 1 : satisfy
-	 * 0 : unknown - it means that there are othere symbols in clause
+	 * 0 : unknown - it means that there are other symbols in clause
 	 * -1: not satisfy 
 	 * 
 	 * */
 	public int isTrue(HashMap<String, Boolean> model){
-		//System.out.println("isTrue");
+		if(model.size()<1)
+			return 0;
+
 		int ret = 1;
 		for(Element e : elements){
-			//System.out.println("element:"+e);
-			/*model has a key*/
-			
+			/*model has a key*/			
 			if(model.containsKey(e.symbol)){
-				//System.out.format("contain\n");
 				if(e.value!=model.get(e.symbol)){
-					/*it has opposite value : return -1*/
-					ret = -1;
+					/*it has opposite value -> false, but previously it is unknow, it is unknown*/
+					ret = ret==0?0:-1;
 					
 				}else{
 					ret = 1;
@@ -45,11 +52,9 @@ public class Clause {
 				/*if the clause satisfy : stay in satisfy(1)*/
 			}else{
 			/*model doesn't have a key : unknown*/
-				ret = 0;
-				break;
+				ret = 0;	
 			}
 		}
-		//System.out.println("ret:"+ret);
 		return ret;
 	}
 	/*
@@ -85,10 +90,10 @@ public class Clause {
 			}
 		}
 		
-		/*set unit clause when it is an unit clause*/
+		/*set unit clause when the clause has only one literal*/
 		if(elements.size() == 1){
 			this.isUnitclause = true;
-			this.unitclause   = elements.get(0).symbol;
+			this.unitclause   = elements.get(0);
 		}
 	}
 	
@@ -119,6 +124,7 @@ public class Clause {
 class Element{
 	String symbol;
 	boolean value;
+	
 	Element(String s){
 		this.symbol = s;
 	}

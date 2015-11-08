@@ -1,12 +1,22 @@
+/*
+ * Author : Jiyoung Hwang
+ * Date   : 11/07/2015
+ * Desc   : implement DPLL recursive backtracking search algorithm to satisfy propositional logic
+ *          use 2 heuristic : pure symbol, unit clause
+ *          baseline : backtracking search only
+ * 
+ * */
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
+
 public class DPLLSat {
-	static HashSet<String>    capabilities = new HashSet<String>();
-	static ArrayList<Clause>  clauses      = new ArrayList<Clause>();
-	
-	static HashMap<String, Boolean>   model        = new HashMap<String, Boolean>();
+	HashSet<String>          capabilities = new HashSet<String>();
+	ArrayList<Clause>        clauses      = new ArrayList<Clause>();
+	HashMap<String, Boolean> model        = new HashMap<String, Boolean>();
+	int mode = 0;
 	int iter = 0;
 	
 	public static void main(String args[]){
@@ -17,11 +27,9 @@ public class DPLLSat {
 		/*dpll satisfiability*/
 		if(args.length==1){
 			DPLLSat dpllsat = new DPLLSat();
-			/*readfile*/
-			clauses = common.readFile(args[0]);
-			if(clauses!=null && clauses.isEmpty() )
+			if(!dpllsat.getReady(args))
 				return;
-				
+			
 			HashMap<String, Boolean> symbols = dpllsat.extractSymbols();
 			dpllsat.printInitialclauses();
 			dpllsat.dpll(symbols);
@@ -33,6 +41,23 @@ public class DPLLSat {
 		}else{
 			return;
 		}
+	}
+	DPLLSat(){
+		
+	}
+	private boolean getReady(String args[]){
+		mode = common.setMode();
+		if(mode < 0)
+			return false;
+		/*
+		 * read a knowledge base from a file and set knowledge in clauses
+		 * 
+		 * */
+		clauses = common.readFile(args[0]);
+		if(clauses!=null && clauses.isEmpty() )
+			return false;
+		else
+			return true;
 	}
 	/*
 	 * print solution
@@ -67,63 +92,149 @@ public class DPLLSat {
 	private boolean dpll(HashMap<String, Boolean> symbols){
 //		if(iter>30)
 //			System.exit(42);
+		
 		/*check all clauses are true*/
 		if(isAllclausestrue(symbols))
 			return true;
 		
 		if(isSomeclausefalse())
 			return false;
-		
-		String s;
-		boolean isunit = false;
-		s = findUnitclause(symbols);
-		
-		/*no unit clauses*/
-		if(s==null){
-			s = findUnassignedsymbol(symbols);
-		}else{
-			isunit = true;
-		}
-		
-		/*s is in use*/
-		symbols.put(s,true);
-		printModel();
-		System.out.format("[%d]trying on %s=%b\n",++iter,s,true);
-		model.put(s,true);
-		
-		/*set a unit clause based on a selected model*/
-		propagateUnitclause();
-		//check true first
-		if(!dpll(symbols)){	
-			System.out.println("backtracking");
-			printModel();
-			System.out.format("[%d]trying on %s=%b\n",++iter,s,false);
-			model.put(s,false);
 			
-			// check false later
-			if(!dpll(symbols)){
+		Element s = null;
+		/*find pure symbol when mode = 3*/
+		if(mode == 1) 
+			s = findPuresymbol(symbols);
+		
+		if(s==null && mode < 3)
+			s = findUnitclause(symbols);
+		
+		if(s!=null){
+		
+			symbols.put(s.symbol, true);
+			model.put(s.symbol, s.value);
+			printModel();
+			
+			if(model.size()!=symbols.size())
+				propagateUnitclause();
+			
+			if(!dpll(symbols
+					)){
 				/*s is not use any more*/
-				symbols.put(s,false);
+				symbols.put(s.symbol,false);
 				/*remove symbol from model*/
-				model.remove(s);
+				model.remove(s.symbol);
 				
 				/*revoke an unit clause to not an unit clause */
-				propagateUnitclause(s);
-				System.out.println("backtracking");
+				propagateUnitclause(s.symbol);
+				
 				return false;
 			}
 		}
+		/*no pure symbol and unit clauses*/
+		else{
+			s = findUnassignedsymbol(symbols);
+	
+			/*s is in use*/
+			symbols.put(s.symbol,true);
+			System.out.format("[%d]trying on %s=%b\n",++iter,s.symbol,true);
+			model.put(s.symbol,true);
+			printModel();
+			/*set a unit clause based on a selected model*/
+			if(model.size()!=symbols.size() && mode <3)
+				propagateUnitclause();
+			
+			//check true first
+			if(!dpll(symbols)){	
+				System.out.format("[%d]trying on %s=%b\n",++iter,s.symbol,false);
+				model.put(s.symbol,false);
+				printModel();
+				
+				// check false later
+				if(!dpll(symbols)){
+					/*s is not use any more*/
+					symbols.put(s.symbol,false);
+					/*remove symbol from model*/
+					model.remove(s.symbol);
+					
+					/*revoke an unit clause to not an unit clause */
+					if(mode<3)
+						propagateUnitclause(s.symbol);
+
+					System.out.format("backtracking\n");
+					return false;
+				}
+			}
+		}			
+		
 		/*do code*/
 		return true;
 		
 	}
+	
+	private Element findPuresymbol(HashMap<String, Boolean> symbols){
+		Boolean prevalue  = null;
+		boolean isNotpure = true;
+		Element e         = null;
+		
+		for(String key: symbols.keySet()){
+			prevalue = null;
+			/*exclude already assigned symbols*/
+			if(symbols.get(key))
+				continue;
+			
+			
+			e = new Element(key);
+			
+			for(Clause c: clauses){
+				
+				/*exclude clauses not containing the symbol*/
+				if(!c.clause.contains(key))
+					continue;
+				
+				/*exclude true clauses*/
+				if(c.isTrue(model)==1)
+					continue;
+				
+
+				
+				int index = c.clause.indexOf(key);
+				if(c.clause.charAt(index>0? index-1:index)=='-'){
+					e.value = false;
+				}else 
+					e.value = true;
+
+
+				
+				if(prevalue==null)
+					prevalue = e.value;
+				
+				/*check pure by XOR*/
+				isNotpure = prevalue ^ e.value;
+				
+				if(isNotpure)
+					break;
+				
+				prevalue = e.value;
+			}
+			
+			if(prevalue !=null && !(isNotpure)){
+				System.out.format("[%d]Pure Symbol on %s=%b\n",++iter,e.symbol,e.value);
+				return e;
+			}
+		}
+		return null;
+	}
 	/*
 	 * find an unit clause (heuristic)
 	 * 
+	 * what is a unit clause ?
+	 * 1) has one literal
+	 * 2) in DPLL context, all literals but one are already assigned false by the model
+	 * 
 	 * */
-	private String findUnitclause(HashMap<String, Boolean> symbols){
+	private Element findUnitclause(HashMap<String, Boolean> symbols){
 		for(Clause c: clauses){
-			if(c.isUnitclause && !symbols.get(c.unitclause)){
+			if(c.isUnitclause && !symbols.get(c.unitclause.symbol)){
 				return c.unitclause;
 			}
 		}
@@ -134,29 +245,46 @@ public class DPLLSat {
 	 * 
 	 * */
 	private void propagateUnitclause(){
+
 		int unit;
-		String unitclause=null;
+		Element unitclause;
+		
 		for(Clause c : clauses){	
-			if(!c.isUnitclause){
-				unit = c.elements.size();
+			unit = c.elements.size();
+			
+			/*
+			 * if a clauses has one literal, it is a unit clause
+			 * so, among clauses has more than 1 literal, check if all literals but one 
+			 * already assigned false by the model
+			 * 
+			 * */
+			if(unit>1 && !c.isUnitclause){
+				unitclause = null;
+				
 				for(Element e : c.elements){
-					
+					/*check literals if it is assigned to false */
 					if(model.containsKey(e.symbol)){
-						if(unit==1)
+						/*element is assigned false*/
+						if(model.get(e.symbol) != e.value){
+							unit--;
+						}else{
 							break;
-						unit--;						
+						}
 					}else{
-						unitclause = e.symbol;
+						unitclause = e;
 					}
 				}
-				if(unit==1){
+				
+				//System.out.println(c.clause + " : " + unitclause);
+				if(unitclause!=null && unit==1){
 					c.isUnitclause = true;
 					c.unitclause   = unitclause;
-					System.out.format("unit_clause on (%s)\n",c.clause);
+					
+					System.out.format("[%d]unit_clause on (%s) implies %s=%b\n",++iter,c.clause,c.unitclause.symbol,c.unitclause.value);
+					return;
 				}
 			}
 		}
-		
 	}
 	
 	/*
@@ -205,13 +333,13 @@ public class DPLLSat {
 	 * find unassigned symbol
 	 * 
 	 * */
-	private String findUnassignedsymbol(HashMap<String, Boolean> symbols){
+	private Element findUnassignedsymbol(HashMap<String, Boolean> symbols){
 		for(String key:symbols.keySet()){
 			if(!symbols.get(key)){
-				return key;
+				return new Element(key);
 			}
 		}
-		return "";
+		return null;
 	}
 	/*
 	 * check all clauses satisfy a model when a model is fully set
@@ -289,7 +417,7 @@ public class DPLLSat {
 	private void printModel(){
 		System.out.print("model={");
 		for(String key:model.keySet()){
-			System.out.format("(%s:%b)",key,model.get(key));
+			System.out.format("\'%s\':%b ",key,model.get(key));
 		}
 		System.out.println("}");
 	}
