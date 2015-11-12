@@ -16,8 +16,9 @@ public class DPLLSat {
 	HashSet<String>          capabilities = new HashSet<String>();
 	ArrayList<Clause>        clauses      = new ArrayList<Clause>();
 	HashMap<String, Boolean> model        = new HashMap<String, Boolean>();
-	int mode = 0;
-	int iter = 0;
+	int mode   = 0;
+	int iter   = 0;
+	int atmost = 3;
 	
 	public static void main(String args[]){
 
@@ -37,7 +38,17 @@ public class DPLLSat {
 			
 		/*dpll job_agent satisfiability*/	
 		}else if(args.length==2){
-//			DPLLjob dplljob = new DPLLjob();
+
+			DPLLSat dplljob = new DPLLSat();
+			
+			if(!dplljob.getReady(args))
+				return;	
+			
+			HashMap<String, Boolean> symbols = dplljob.extractSymbols();
+			dplljob.printInitialclauses();
+			dplljob.dpll(symbols);
+			dplljob.printsolution();
+		
 		}else{
 			return;
 		}
@@ -45,7 +56,25 @@ public class DPLLSat {
 	DPLLSat(){
 		
 	}
+	/*
+	 * write agents capabilities, constraints, and query
+	 * prompt the mode for dpll
+	 * read a file to run DPLL to get agents to complete work 
+	 * 
+	 * */
 	private boolean getReady(String args[]){
+
+		capabilities = common.InitializeCapability();
+		if(capabilities.isEmpty())
+			return false;
+		
+		if(!common.printcapability(args[0]))
+			return false;
+		if(!common.printjob_agent(args[0]))
+			return false;
+		if(!common.addQuery(args[0], args[1]))
+			return false;
+		
 		mode = common.setMode();
 		if(mode < 0)
 			return false;
@@ -53,8 +82,8 @@ public class DPLLSat {
 		 * read a knowledge base from a file and set knowledge in clauses
 		 * 
 		 * */
-		clauses = common.readFile(args[0]);
-		if(clauses!=null && clauses.isEmpty() )
+		clauses = common.readFile(args, capabilities);
+		if(clauses==null || clauses.isEmpty() )
 			return false;
 		else
 			return true;
@@ -147,6 +176,7 @@ public class DPLLSat {
 			if(!dpll(symbols)){	
 				System.out.format("[%d]trying on %s=%b\n",++iter,s.symbol,false);
 				model.put(s.symbol,false);
+				
 				printModel();
 				
 				// check false later
@@ -395,14 +425,21 @@ public class DPLLSat {
 	 * 
 	 * */
 	private HashMap<String, Boolean> extractSymbols(){
+		if(clauses == null)
+			return null;
+		
 		HashMap<String, Boolean> symbols = new HashMap<String, Boolean> ();
+		
 		String tmp = null;
 		for(int i=0;i<clauses.size();i++){
 			tmp = clauses.get(i).clause;
 			tmp = tmp.replace("-", "");
 			
-			for(String s : tmp.split(" ")){				
+			for(String s : tmp.split("[ ]+")){
+				if(s.equals("r"))
+					System.out.println("=====>"+s + "  " + tmp);
 				if(!symbols.containsKey(s)){
+					/*false : not used yet*/
 					symbols.put(s,false);
 				}
 			}
@@ -421,7 +458,6 @@ public class DPLLSat {
 		}
 		System.out.println("}");
 	}
-
 }
 
 

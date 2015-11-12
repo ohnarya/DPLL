@@ -77,6 +77,7 @@ public class Clause {
 		String[] clauses = clause.split(" ");
 		for(String c:clauses){
 			Element e;
+			
 			/*negative*/
 			if(c.substring(0,1).equals("-")){
 				e = new Element(c.substring(1));

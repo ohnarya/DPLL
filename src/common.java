@@ -6,8 +6,11 @@
  * */
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -19,24 +22,7 @@ import java.util.regex.Pattern;
 public class common {
 	
 	private static Scanner reader;
-
-	/*
-	 * initialize capabilities
-	 * 
-	 * */
-	public static HashSet<String> InitializeCapability(){
-		HashSet<String> capabilities = new HashSet<String>();
-		
-		capabilities.add("painter");
-		capabilities.add("stapler");
-		capabilities.add("recharger");
-		capabilities.add("welder");
-		capabilities.add("cutter");
-		capabilities.add("sander");
-		capabilities.add("joiner");
-		capabilities.add("gluer");
-		return capabilities;
-	}
+	
 	
 	/*
 	 * set mode from a user input
@@ -120,17 +106,76 @@ public class common {
 			return false;
 		}
 	}
-	
+	/*
+	 * initialize capabilities
+	 * 
+	 * */
+	public static  HashSet<String> InitializeCapability(){
+		HashSet<String> capabilities = new HashSet<String>();
+		
+		capabilities.add("painter");   //painter
+		capabilities.add("stapler");   //stapler
+		capabilities.add("recharger"); //recharger
+		capabilities.add("welder");    //welder
+		capabilities.add("cutter");    //cutter
+		capabilities.add("sander");    //sander
+		capabilities.add("joiner");    //joiner
+		capabilities.add("gluer");     //gluer
+		
+		return capabilities;
+		
+	}
+	/*
+	 * add query before running DPLL
+	 * 
+	 * */
+	public static boolean addQuery(String filename, String querys){
+		PrintWriter writer = null;
+		boolean ret = true;
+		try{
+			writer = new PrintWriter(new BufferedWriter(new FileWriter(filename,true)));
+			writer.println();
+			writer.println("# add queries.");
+			for(String s : querys.split(" ")){
+				writer.format("%s\r\n",s);
+			}
+			writer.close();
+		}catch(IOException ioe){
+			ret = false;
+			System.out.println(ioe.getMessage());
+			
+		}finally{
+			if(writer!=null)
+				writer.close();
+		}
+		return ret;
+	}
 	/*
 	 * read an input file
 	 * 
 	 * */
-	public static ArrayList<Clause> readFile(String filename){
+	public static ArrayList<Clause> readFile(String args[],HashSet<String> capabilities){
 		ArrayList<Clause> clauses = new ArrayList<Clause>();
 		
-		try(BufferedReader br = new BufferedReader(new FileReader(filename))){
+		/*agent_job*/
+		if(args.length>1){
+			String [] capability = args[1].split(" ");
+			for(String c : capability){
+				
+				if(!capabilities.contains(c)){
+					System.out.format("Wrong capability(%s) was entered\n",c);
+					return null;
+				
+				}
+				/*add query into kb*/
+				clauses.add(new Clause(c));
+			}
+		}
+		
+		try(BufferedReader br = new BufferedReader(new FileReader(args[0]))){
 			String curline;
 			while((curline = br.readLine()) !=null ){
+				
 				/*ignore empty lines*/
 				if(curline.trim().length()<1)
 					continue;
@@ -144,10 +189,83 @@ public class common {
 				}
 			}
 		}catch(IOException e){
-			System.out.format("%s does not exist.\n",filename);
+			System.out.format("%s does not exist.\n",args[0]);
 			return null;
 		}
+			
 		return clauses;
 	}
-	
+	public static boolean printcapability(String filename){
+		PrintWriter writer = null;
+		boolean ret = true;
+		try{
+			writer = new PrintWriter(filename,"UTF-8");
+			writer.println("# agents capabilities.");
+			writer.println("-a painter stapler recharger welder");
+			writer.println("-b cutter sander welder stapler");
+			writer.println("-c cutter painter");
+			writer.println("-d sander welder recharger");
+			writer.println("-e painter stapler welder");
+			writer.println("-f stapler welder joiner recharger");
+			writer.println("-g stapler gluer painter recharger");
+			writer.println("-h cutter gluer");
+			writer.println("");
+			writer.println("# agents can do a certain job");
+			writer.println("-painter a c e g");
+			writer.println("-stapler a b e f g");
+			writer.println("-recharger a d f g");
+			writer.println("-sander b d");
+			writer.println("-welder a b d e f");
+			writer.println("-cutter b c h");
+			writer.println("-joiner f");
+			writer.println("-gluer g h");
+			writer.println("");
+		
+			writer.close();
+		}catch(IOException ioe){
+			ret = false;
+			System.out.println(ioe.getMessage());
+		}finally{
+			try{
+				if(writer!=null)
+					writer.close();
+			}catch(Exception ex){
+				System.out.println(ex.getMessage());
+			}
+		}	
+		return ret;
+	}
+	public static boolean printjob_agent(String filename){
+		PrintWriter writer = null;
+		boolean ret = true;
+		
+		String [] agents = {"a","b","c","d","e","f","g","h"};
+		
+		try{
+			writer = new PrintWriter(new BufferedWriter(new FileWriter(filename,true)));
+			writer.println("# 4 agents cannot be true at the same time");
+			for(int i = 0;i<agents.length-3;i++){
+				for(int j=i+1;j<agents.length-2;j++){
+					for(int k=j+1;k<agents.length-1;k++){
+						for(int l=k+1;l<agents.length;l++){
+							
+							writer.format("-%s -%s -%s -%s\r\n",agents[i],agents[j],agents[k],agents[l]);
+						}
+					}
+				}
+			}
+			writer.close();
+		}catch(IOException ioe){
+			ret = false;
+			System.out.println(ioe.getMessage());
+		}finally{
+			try{
+				if(writer!=null)
+					writer.close();
+			}catch(Exception ex){
+				System.out.println(ex.getMessage());
+			}
+		}
+		return ret;
+	}
 }
