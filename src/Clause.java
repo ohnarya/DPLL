@@ -16,7 +16,7 @@ public class Clause {
 	Element            unitclause;
 	
 	boolean            isPureclause;
-	ArrayList<Element> elements      = new ArrayList<Element>();
+	ArrayList<Element> elements  = new ArrayList<Element>();
 	
 	Clause(String c){
 		this.clause       = c;
@@ -25,6 +25,7 @@ public class Clause {
 		this.isPureclause = false;
 		buildElements();
 	}
+	
 	/*
 	 * check a clause satisfies model
 	 * return 

@@ -13,114 +13,108 @@ import java.util.HashSet;
 
 
 public class DPLLSat {
-	HashSet<String>          capabilities = new HashSet<String>();
-	ArrayList<Clause>        clauses      = new ArrayList<Clause>();
-	HashMap<String, Boolean> model        = new HashMap<String, Boolean>();
-	int mode   = 0;
-	int iter   = 0;
-	int atmost = 3;
+	HashSet<String>          capabilities; 
+	ArrayList<Clause>        clauses;      
+	HashMap<String, Boolean> model ;  
+	HashMap<String, Boolean> symbols;
+    int mode;
+	int iter;
 	
 	public static void main(String args[]){
-
-		/*check inputs*/
-		if(!common.checkInput(args))
-			return;
-		/*dpll satisfiability*/
-		if(args.length==1){
-			DPLLSat dpllsat = new DPLLSat();
-			if(!dpllsat.getReady(args))
-				return;
-			
-			HashMap<String, Boolean> symbols = dpllsat.extractSymbols();
-			dpllsat.printInitialclauses();
-			dpllsat.dpll(symbols);
-			dpllsat.printsolution();
-			
-		/*dpll job_agent satisfiability*/	
-		}else if(args.length==2){
-
-			DPLLSat dplljob = new DPLLSat();
-			
-			if(!dplljob.getReady(args))
-				return;	
-			
-			HashMap<String, Boolean> symbols = dplljob.extractSymbols();
-			dplljob.printInitialclauses();
-			dplljob.dpll(symbols);
-			dplljob.printsolution();
 		
-		}else{
+		HashSet<String>   capabilities = common.InitializeCapability();
+		ArrayList<Clause> clauses      = null;
+		
+		DPLLSat dpllsat                = null;
+		int     mode;
+		
+		/*check inputs*/
+		if(!common.checkInput(args,capabilities))
 			return;
+		
+		/*run DPLL*/
+		while(true){
+			mode    = common.setMode();
+			
+			/*end condition*/
+			if(mode<0)
+				break;
+			
+			clauses = common.getReady(args, capabilities);
+			dpllsat = new DPLLSat(capabilities, clauses,mode);
+						
+			dpllsat.run(args.length);				
 		}
 	}
-	DPLLSat(){
-		
+	DPLLSat(HashSet<String>   capabilities, ArrayList<Clause> clauses, int mode){
+		this.capabilities = capabilities;
+		this.clauses      = clauses;
+		this.model        = new HashMap<String, Boolean>();
+		this.mode         = mode;
+		this.iter         = 0; 
+		this.extractSymbols();
 	}
+	
 	/*
-	 * write agents capabilities, constraints, and query
-	 * prompt the mode for dpll
-	 * read a file to run DPLL to get agents to complete work 
+	 * run DPLL
 	 * 
 	 * */
-	private boolean getReady(String args[]){
-
-		capabilities = common.InitializeCapability();
-		if(capabilities.isEmpty())
-			return false;
+	public void run(int option){
 		
-		if(!common.printcapability(args[0]))
-			return false;
-		if(!common.printjob_agent(args[0]))
-			return false;
-		if(!common.addQuery(args[0], args[1]))
-			return false;
+		/*print initial clauses*/
+		this.printInitialclauses();
 		
-		mode = common.setMode();
-		if(mode < 0)
-			return false;
-		/*
-		 * read a knowledge base from a file and set knowledge in clauses
-		 * 
-		 * */
-		clauses = common.readFile(args, capabilities);
-		if(clauses==null || clauses.isEmpty() )
-			return false;
-		else
-			return true;
+		/*run DPLL*/
+		this.dpll();
+		
+		/*print solution*/
+		this.printsolution(option);		
 	}
+
 	/*
 	 * print solution
 	 * 
 	 * */
-	private void printsolution(){
+	private void printsolution(int isAgent){
 		System.out.println("----------------------------");
 		System.out.format("node searched=%d\n", iter);
 		System.out.println("solution:");
+		
 		for(String key:model.keySet()){
 			System.out.format("%s=%b\n",key,model.get(key));
 		}
-		printtrue();
+		printtrue(isAgent);
 	}
 	
 	/*
 	 * print literals with true value
 	 * 
 	 * */
-	private void printtrue(){
-		System.out.println("true props:");
-		for(String key:model.keySet()){
-			if(model.get(key))
-				System.out.println(key);
+	private void printtrue(int isAgent){
+		System.out.println("----------------------------");
+		
+		if(isAgent==1){
+			System.out.println("true props:");
+			for(String key:model.keySet()){
+				if(model.get(key))
+					System.out.print(key+ " ");
+			}
+		}else{
+			System.out.println("agent team:");
+			for(String key:model.keySet()){
+				if(!capabilities.contains(key) && model.get(key)){
+					System.out.print(key+ " ");
+				}
+			}
 		}
+		System.out.println("\n----------------------------");
 	}
 	
 	/*
 	 * run DPLL - recursive backtracking search algorithm
 	 * 
 	 * */
-	private boolean dpll(HashMap<String, Boolean> symbols){
-//		if(iter>30)
-//			System.exit(42);
+	private boolean dpll(){
 		
 		/*check all clauses are true*/
 		if(isAllclausestrue(symbols))
@@ -132,22 +126,19 @@ public class DPLLSat {
 		Element s = null;
 		/*find pure symbol when mode = 3*/
 		if(mode == 1) 
-			s = findPuresymbol(symbols);
+			s = findPuresymbol();
 		
 		if(s==null && mode < 3)
-			s = findUnitclause(symbols);
+			s = findUnitclause();
 		
+		/*the case of using heuristics*/
 		if(s!=null){
 		
 			symbols.put(s.symbol, true);
 			model.put(s.symbol, s.value);
 			printModel();
 			
-			if(model.size()!=symbols.size())
-				propagateUnitclause();
-			
-			if(!dpll(symbols
-					)){
+			if(!dpll()){
 				/*s is not use any more*/
 				symbols.put(s.symbol,false);
 				/*remove symbol from model*/
@@ -161,26 +152,23 @@ public class DPLLSat {
 		}
 		/*no pure symbol and unit clauses*/
 		else{
-			s = findUnassignedsymbol(symbols);
+			s = findUnassignedsymbol();
 	
 			/*s is in use*/
 			symbols.put(s.symbol,true);
 			System.out.format("[%d]trying on %s=%b\n",++iter,s.symbol,true);
 			model.put(s.symbol,true);
 			printModel();
-			/*set a unit clause based on a selected model*/
-			if(model.size()!=symbols.size() && mode <3)
-				propagateUnitclause();
-			
+					
 			//check true first
-			if(!dpll(symbols)){	
+			if(!dpll()){	
 				System.out.format("[%d]trying on %s=%b\n",++iter,s.symbol,false);
 				model.put(s.symbol,false);
 				
 				printModel();
 				
 				// check false later
-				if(!dpll(symbols)){
+				if(!dpll()){
 					/*s is not use any more*/
 					symbols.put(s.symbol,false);
 					/*remove symbol from model*/
@@ -196,22 +184,24 @@ public class DPLLSat {
 			}
 		}			
 		
-		/*do code*/
 		return true;
 		
 	}
-	
-	private Element findPuresymbol(HashMap<String, Boolean> symbols){
+	/*
+	 * findpuresymbol
+	 * 
+	 * */
+	private Element findPuresymbol(){
 		Boolean prevalue  = null;
 		boolean isNotpure = true;
 		Element e         = null;
 		
 		for(String key: symbols.keySet()){
 			prevalue = null;
+			
 			/*exclude already assigned symbols*/
 			if(symbols.get(key))
 				continue;
-			
 			
 			e = new Element(key);
 			
@@ -225,15 +215,12 @@ public class DPLLSat {
 				if(c.isTrue(model)==1)
 					continue;
 				
-
-				
 				int index = c.clause.indexOf(key);
+
 				if(c.clause.charAt(index>0? index-1:index)=='-'){
 					e.value = false;
 				}else 
 					e.value = true;
-
-
 				
 				if(prevalue==null)
 					prevalue = e.value;
@@ -262,9 +249,12 @@ public class DPLLSat {
 	 * 2) in DPLL context, all literals but one are already assigned false by the model
 	 * 
 	 * */
-	private Element findUnitclause(HashMap<String, Boolean> symbols){
+	private Element findUnitclause(){
+		propagateUnitclause();
 		for(Clause c: clauses){
 			if(c.isUnitclause && !symbols.get(c.unitclause.symbol)){
+				System.out.format("[%d]unit_clause on (%s) implies %s=%b\n",
+			             ++iter,     c.clause,     c.unitclause.symbol, c.unitclause.value);
 				return c.unitclause;
 			}
 		}
@@ -292,14 +282,17 @@ public class DPLLSat {
 				unitclause = null;
 				
 				for(Element e : c.elements){
+					
 					/*check literals if it is assigned to false */
 					if(model.containsKey(e.symbol)){
+					
 						/*element is assigned false*/
 						if(model.get(e.symbol) != e.value){
 							unit--;
 						}else{
 							break;
 						}
+						
 					}else{
 						unitclause = e;
 					}
@@ -309,9 +302,8 @@ public class DPLLSat {
 				if(unitclause!=null && unit==1){
 					c.isUnitclause = true;
 					c.unitclause   = unitclause;
-					
-					System.out.format("[%d]unit_clause on (%s) implies %s=%b\n",++iter,c.clause,c.unitclause.symbol,c.unitclause.value);
-					return;
+				
+					break;
 				}
 			}
 		}
@@ -363,7 +355,7 @@ public class DPLLSat {
 	 * find unassigned symbol
 	 * 
 	 * */
-	private Element findUnassignedsymbol(HashMap<String, Boolean> symbols){
+	private Element findUnassignedsymbol(){
 		for(String key:symbols.keySet()){
 			if(!symbols.get(key)){
 				return new Element(key);
@@ -406,7 +398,7 @@ public class DPLLSat {
 		for(Clause c : clauses)
 			System.out.format("%d: (%s)\n",i++, c.clause);
 		
-		System.out.println("-------------------");
+		System.out.println("----------------------------");
 	}
 	
 	/*
@@ -424,11 +416,9 @@ public class DPLLSat {
 	 * extract Symbols from clauses
 	 * 
 	 * */
-	private HashMap<String, Boolean> extractSymbols(){
-		if(clauses == null)
-			return null;
+	private void extractSymbols(){
 		
-		HashMap<String, Boolean> symbols = new HashMap<String, Boolean> ();
+		symbols = new HashMap<String, Boolean>();
 		
 		String tmp = null;
 		for(int i=0;i<clauses.size();i++){
@@ -436,16 +426,14 @@ public class DPLLSat {
 			tmp = tmp.replace("-", "");
 			
 			for(String s : tmp.split("[ ]+")){
-				if(s.equals("r"))
-					System.out.println("=====>"+s + "  " + tmp);
 				if(!symbols.containsKey(s)){
 					/*false : not used yet*/
 					symbols.put(s,false);
 				}
 			}
 		}
+	
 		printSymbols(symbols);
-		return symbols;
 	}
 	/*
 	 * print model

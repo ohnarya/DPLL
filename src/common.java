@@ -46,7 +46,7 @@ public class common {
 			String userinput = reader.nextLine();
 			
 			if(userinput.equals("q")){
-				System.out.println("Bye Bye~");
+				System.out.println("Bye Bye~~~~~");
 				return -1;
 			}
 			
@@ -58,17 +58,48 @@ public class common {
 	}
 	
 	/*
+	 * write agents capabilities, constraints, and query
+	 * prompt the mode for dpll
+	 * read a file to run DPLL to get agents to complete work 
+	 * 
+	 * */
+	public static ArrayList<Clause> getReady(String args[], HashSet<String> capabilities){
+		ArrayList<Clause> clauses = new ArrayList<Clause>();
+		
+		/*only for job_agent*/
+		if(args.length>1){
+			if(capabilities.isEmpty())
+				return clauses;
+			
+			if(!common.printcapability(args[0]))
+				return clauses;
+			if(!common.printjob_agent(args[0]))
+				return clauses;
+			if(!common.addQuery(args[0], args[1]))
+				return clauses;
+		}
+		
+		/*
+		 * read a knowledge base from a file and set knowledge in clauses
+		 * 
+		 * */
+		clauses = common.readFile(args, capabilities);
+		return clauses;
+	}
+	
+	/*
 	 * check inputs
 	 * 
 	 * */
-	public static boolean checkInput(String args[]){
+	public static boolean checkInput(String args[],HashSet<String> capabilities){
 		int i=1;
+		
 		if(args.length ==1){
 			i++;
 			/*1. check if the file exists*/
 			String filename = args[0];
 			if(filename.isEmpty()){
-				System.out.format("[%d] Input : xxxx.kb \"lists of capability\"",i);  //2
+				System.out.format("[%d]No filename!\nexample : xxxx.kb",i);  //2
 				return false;
 			}
 			
@@ -76,28 +107,38 @@ public class common {
 		}else if(args.length == 2){
 			
 			i++;
-			/*1. check if the file exists*/
+			/*1-0. check if the file exists*/
 			String filename = args[0];
 			if(filename.isEmpty()){
-				System.out.format("[%d] Input : xxxx.kb \"lists of capability\"",i);  //2
+				System.out.format("[%d]No filename!\nexample : xxxx.kb \"lists of capability\"",i);  //2
 				return false;
 			}
+			/*1-1. check the file format*/
 			Pattern p = Pattern.compile("\\w+.kb");
 			Matcher m = p.matcher(filename.toLowerCase());
 			
 			if(!m.find()){
-				System.out.format("[%d] Input : xxxx.kb \"lists of capability\"",i); //3
+				System.out.format("[%d]Invalid fileformat(%s)\nexample : xxxx.kb \"lists of capability\"",i,filename); //3
 				return false;
 			}
 			
 			i++;
 			
-			/*2. check if the capabilities exist*/
+			/*2-0. check if the capabilities exist*/
 			String capability = args[1];
 			if(capability.isEmpty()){
-				System.out.format("[%d] Input : xxxx.kb \"lists of capability\"",i); //4
+				System.out.format("[%d]No capabilites!\nexample : xxxx.kb \"lists of capability\"",i); //4
 				return false;
-			}			
+			}
+			i++;
+			/*2-0. check if input capabilities are valid */
+			for(String c : capability.split(" ")){
+				if(!capabilities.contains(c)){
+					System.out.format("[%d]Invalid capability(%s)\nexample : xxxx.kb \"lists of capability\"",i,c); //5
+					return false;				
+				}
+			}
+			
 			/*if pass every thing*/
 			return true;
 
@@ -157,21 +198,6 @@ public class common {
 	public static ArrayList<Clause> readFile(String args[],HashSet<String> capabilities){
 		ArrayList<Clause> clauses = new ArrayList<Clause>();
 		
-		/*agent_job*/
-		if(args.length>1){
-			String [] capability = args[1].split(" ");
-			for(String c : capability){
-				
-				if(!capabilities.contains(c)){
-					System.out.format("Wrong capability(%s) was entered\n",c);
-					return null;
-				
-				}
-				/*add query into kb*/
-				clauses.add(new Clause(c));
-			}
-		}
-		
 		try(BufferedReader br = new BufferedReader(new FileReader(args[0]))){
 			String curline;
 			while((curline = br.readLine()) !=null ){
@@ -200,17 +226,37 @@ public class common {
 		boolean ret = true;
 		try{
 			writer = new PrintWriter(filename,"UTF-8");
-			writer.println("# agents capabilities.");
-			writer.println("-a painter stapler recharger welder");
-			writer.println("-b cutter sander welder stapler");
-			writer.println("-c cutter painter");
-			writer.println("-d sander welder recharger");
-			writer.println("-e painter stapler welder");
-			writer.println("-f stapler welder joiner recharger");
-			writer.println("-g stapler gluer painter recharger");
-			writer.println("-h cutter gluer");
+			writer.println("#an agent can do certain jobs");
+			writer.println("-a painter");
+			writer.println("-a stapler");
+			writer.println("-a recharger");
+			writer.println("-a welder");
+			writer.println("-b cutter");
+			writer.println("-b sander");
+			writer.println("-b welder");
+			writer.println("-b stapler");
+			writer.println("-c cutter");
+			writer.println("-c painter");
+			writer.println("-d sander");
+			writer.println("-d welder");
+			writer.println("-d recharger");
+			writer.println("-e painter");
+			writer.println("-e stapler");
+			writer.println("-e welder");
+			writer.println("-f stapler");
+			writer.println("-f welder");
+			writer.println("-f joiner");
+			writer.println("-f recharger");
+			writer.println("-g stapler");
+			writer.println("-g gluer");
+			writer.println("-g painter");
+			writer.println("-f recharger");
+			writer.println("-h cutter");
+			writer.println("-g gluer");
+			
+			
 			writer.println("");
-			writer.println("# agents can do a certain job");
+			writer.println("# a job can be done by one or several agents");
 			writer.println("-painter a c e g");
 			writer.println("-stapler a b e f g");
 			writer.println("-recharger a d f g");
@@ -220,7 +266,11 @@ public class common {
 			writer.println("-joiner f");
 			writer.println("-gluer g h");
 			writer.println("");
-		
+
+			
+			writer.println("# at least one agent should be selected");
+			writer.println("a b c d e f g h");
+			
 			writer.close();
 		}catch(IOException ioe){
 			ret = false;
@@ -254,6 +304,7 @@ public class common {
 					}
 				}
 			}
+
 			writer.close();
 		}catch(IOException ioe){
 			ret = false;

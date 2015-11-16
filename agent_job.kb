@@ -1,14 +1,32 @@
-# agents capabilities.
--a painter stapler recharger welder
--b cutter sander welder stapler
--c cutter painter
--d sander welder recharger
--e painter stapler welder
--f stapler welder joiner recharger
--g stapler gluer painter recharger
--h cutter gluer
+#an agent can do certain jobs
+-a painter
+-a stapler
+-a recharger
+-a welder
+-b cutter
+-b sander
+-b welder
+-b stapler
+-c cutter
+-c painter
+-d sander
+-d welder
+-d recharger
+-e painter
+-e stapler
+-e welder
+-f stapler
+-f welder
+-f joiner
+-f recharger
+-g stapler
+-g gluer
+-g painter
+-f recharger
+-h cutter
+-g gluer
 
-# agents can do a certain job
+# a job can be done by one or several agents
 -painter a c e g
 -stapler a b e f g
 -recharger a d f g
@@ -18,6 +36,8 @@
 -joiner f
 -gluer g h
 
+# at least one agent should be selected
+a b c d e f g h
 # 4 agents cannot be true at the same time
 -a -b -c -d
 -a -b -c -e
@@ -91,8 +111,7 @@
 -e -f -g -h
 
 # add queries.
-cutter
-welder
 painter
+sander
+gluer
 joiner
-recharger

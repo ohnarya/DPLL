@@ -1,3 +1,4 @@
+#example.kb
 -a -f g
 -a -b -h
 a c
@@ -17,4 +18,4 @@ h -o -j n
 -i j
 -d -l -m
 -e m -n
--f h i
+-f h i
