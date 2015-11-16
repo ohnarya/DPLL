@@ -46,17 +46,9 @@ public class DPLLSat {
 			dpllsat.run(args.length);				
 		}
 	}
-	DPLLSat(HashSet<String>   capabilities, ArrayList<Clause> clauses, int mode){
-		this.capabilities = capabilities;
-		this.clauses      = clauses;
-		this.model        = new HashMap<String, Boolean>();
-		this.mode         = mode;
-		this.iter         = 0; 
-		this.extractSymbols();
-	}
 	
 	/*
-	 * run DPLL
+	 * DPLL wrapper function
 	 * 
 	 * */
 	public void run(int option){
@@ -71,45 +63,6 @@ public class DPLLSat {
 		this.printsolution(option);		
 	}
 
-	/*
-	 * print solution
-	 * 
-	 * */
-	private void printsolution(int isAgent){
-		System.out.println("----------------------------");
-		System.out.format("node searched=%d\n", iter);
-		System.out.println("solution:");
-		
-		for(String key:model.keySet()){
-			System.out.format("%s=%b\n",key,model.get(key));
-		}
-		printtrue(isAgent);
-	}
-	
-	/*
-	 * print literals with true value
-	 * 
-	 * */
-	private void printtrue(int isAgent){
-		System.out.println("----------------------------");
-		
-		if(isAgent==1){
-			System.out.println("true props:");
-			for(String key:model.keySet()){
-				if(model.get(key))
-					System.out.print(key+ " ");
-			}
-		}else{
-			System.out.println("agent team:");
-			for(String key:model.keySet()){
-				if(!capabilities.contains(key) && model.get(key)){
-					System.out.print(key+ " ");
-				}
-			}
-		}
-		System.out.println("\n----------------------------");
-	}
-	
 	/*
 	 * run DPLL - recursive backtracking search algorithm
 	 * 
@@ -187,8 +140,9 @@ public class DPLLSat {
 		return true;
 		
 	}
+	
 	/*
-	 * findpuresymbol
+	 * find a Pure symbol : Heuristic function
 	 * 
 	 * */
 	private Element findPuresymbol(){
@@ -352,7 +306,7 @@ public class DPLLSat {
 	}
 	
 	/*
-	 * find unassigned symbol
+	 * find unassigned symbol - baseline (not using any heuristic functions
 	 * 
 	 * */
 	private Element findUnassignedsymbol(){
@@ -388,6 +342,7 @@ public class DPLLSat {
 		/*if all clauses are true*/
 		return true;
 	}
+	
 	/*
 	 * print initial clauses
 	 * 
@@ -446,6 +401,59 @@ public class DPLLSat {
 		}
 		System.out.println("}");
 	}
+	
+
+	/*
+	 * print solution
+	 * 
+	 * */
+	private void printsolution(int isAgent){
+		System.out.println("----------------------------");
+		System.out.format("node searched=%d\n", iter);
+		System.out.println("solution:");
+		
+		for(String key:model.keySet()){
+			System.out.format("%s=%b\n",key,model.get(key));
+		}
+		printtrue(isAgent);
+	}
+	
+	/*
+	 * print literals with true value
+	 * 
+	 * */
+	private void printtrue(int isAgent){
+		System.out.println("----------------------------");
+		
+		if(isAgent==1){
+			System.out.println("true props:");
+			for(String key:model.keySet()){
+				if(model.get(key))
+					System.out.print(key+ " ");
+			}
+		}else{
+			System.out.println("agent team:");
+			for(String key:model.keySet()){
+				if(!capabilities.contains(key) && model.get(key)){
+					System.out.print(key+ " ");
+				}
+			}
+		}
+		System.out.println("\n----------------------------");
+	}
+	
+	/*
+	 * constructor
+	 * 
+	 * */
+	DPLLSat(HashSet<String>   capabilities, ArrayList<Clause> clauses, int mode){
+		this.capabilities = capabilities;
+		this.clauses      = clauses;
+		this.model        = new HashMap<String, Boolean>();
+		this.mode         = mode;
+		this.iter         = 0; 
+		this.extractSymbols();
+	}		
 }
 
 
